@@ -24,9 +24,16 @@ from .records import (
 FORGERY_CLASSES = ("edit", "delete", "reorder", "bypass", "truncation")
 
 # ---- POLARITY STRIP-POINTS (each guards exactly one check; default True) -----
+# NOTE: __init__.py re-exports the verify FUNCTION into the package namespace,
+# which SHADOWS this submodule attribute. An in-process patch of these toggles
+# must therefore target sys.modules["agent_evidence_ledger.verify"], not
+# agent_evidence_ledger.verify (which resolves to the function). The source-level
+# strip — flipping a constant to False in THIS file — works regardless.
 _CHECK_EDIT = True          # strip-point E: guards _check_links_and_edit
 _CHECK_REORDER = True       # strip-point R: guards _check_sequence
 _CHECK_TRUNCATION = True    # strip-point T: guards _check_truncation (centerpiece)
+_CHECK_DELETE = True        # strip-point D: guards _check_continuity
+_CHECK_BYPASS = True        # strip-point B: guards _check_coverage
 # -----------------------------------------------------------------------------
 
 REG_CITE: str = (
@@ -43,8 +50,8 @@ _HEX64 = re.compile(r"\A[0-9a-f]{64}\Z")
 @dataclasses.dataclass(frozen=True)
 class LedgerVerdict:
     valid: bool
-    forgery_class: object       # str|None: one of FORGERY_CLASSES, "invalid", or None
-    index: object               # int|None
+    forgery_class: str | None   # one of FORGERY_CLASSES, "invalid", or None
+    index: int | None
     detail: str
     reg_cite: str
     head: str
@@ -212,11 +219,12 @@ def verify(records, *, expected_head=None, executed_action_ids=None) -> LedgerVe
             cls, idx, detail = res
             return _verdict(False, cls, idx, detail, head, count)
 
-    # 3. delete (continuity).
-    res = _check_continuity(records)
-    if res is not None:
-        cls, idx, detail = res
-        return _verdict(False, cls, idx, detail, head, count)
+    # 3. delete (continuity). STRIP-POINT D.
+    if _CHECK_DELETE:
+        res = _check_continuity(records)
+        if res is not None:
+            cls, idx, detail = res
+            return _verdict(False, cls, idx, detail, head, count)
 
     # 4. reorder (seq-vs-position). STRIP-POINT R.
     if _CHECK_REORDER:
@@ -232,8 +240,8 @@ def verify(records, *, expected_head=None, executed_action_ids=None) -> LedgerVe
             cls, idx, detail = res
             return _verdict(False, cls, idx, detail, head, count)
 
-    # 6. bypass (coverage cross-check).
-    if executed_action_ids is not None:
+    # 6. bypass (coverage cross-check). STRIP-POINT B.
+    if _CHECK_BYPASS and executed_action_ids is not None:
         res = _check_coverage(records, executed_action_ids)
         if res is not None:
             cls, idx, detail = res

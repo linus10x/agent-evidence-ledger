@@ -12,10 +12,12 @@ detector. The smallest thing that proves the threat model.
 ## The one command
 
 ```
-python3 -m agent_evidence_ledger.demo
+./demo.sh
 ```
 
-or `./demo.sh`. Zero install, no network, no make. The demo builds one valid
+Zero install, no network, no make. (`./demo.sh` sets `PYTHONPATH=src` and runs
+`python3 -m agent_evidence_ledger.demo`; run the bare module form only with that
+path set.) The demo builds one valid
 ledger, then stages each forgery: it first shows a naive verifier ACCEPT the
 tampered chain where the chain is blind, then shows the governed `verify()` CATCH
 it with the class and the index. It self-checks every scene and exits non-zero if

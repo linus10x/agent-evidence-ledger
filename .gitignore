@@ -1,0 +1,8 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+*.egg-info/
+.DS_Store
+.plan.md
+BRAINSTORM.md
+REVIEW.md
